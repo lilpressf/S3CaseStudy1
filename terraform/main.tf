@@ -62,9 +62,9 @@ data "aws_ami" "amazon_linux" {
 # EC2 Instances 
 resource "aws_instance" "web1" {
   ami           = data.aws_ami.amazon_linux.id
-  instance_type = "t3.micro" # cost-effective
+  instance_type = "t3.micro"
   subnet_id     = aws_subnet.public.id
-  security_groups = [aws_security_group.web_sg.name]
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
 
   root_block_device {
     volume_type = "gp3"
@@ -80,7 +80,7 @@ resource "aws_instance" "web2" {
   ami           = data.aws_ami.amazon_linux.id
   instance_type = "t3.micro"
   subnet_id     = aws_subnet.public.id
-  security_groups = [aws_security_group.web_sg.name]
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
 
   root_block_device {
     volume_type = "gp3"
@@ -91,3 +91,4 @@ resource "aws_instance" "web2" {
     Name = "web2"
   }
 }
+

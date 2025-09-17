@@ -31,6 +31,10 @@ jobs:
         run: terraform init
         working-directory: ./terraform
 
+      - name: Terraform Destroy Existing Resources
+        run: terraform destroy -auto-approve || echo "No resources to destroy"
+        working-directory: ./terraform
+
       - name: Terraform Plan
         run: terraform plan
         working-directory: ./terraform
@@ -38,4 +42,3 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve
         working-directory: ./terraform
-      

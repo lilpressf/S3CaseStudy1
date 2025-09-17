@@ -8,13 +8,12 @@ resource "aws_vpc" "main" {
   tags = { Name = "basic-vpc" }
 }
 
-# Internet Gateway
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
-  tags = { Name = "main-igw" }
+  tags   = { Name = "main-igw" }
 }
 
-# Public subnets in 2 AZs
+# Public subnets
 resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_a_cidr
@@ -31,7 +30,7 @@ resource "aws_subnet" "public_b" {
   tags = { Name = "public-subnet-b" }
 }
 
-# Private subnets in 2 AZs
+# Private subnets
 resource "aws_subnet" "private_a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_a_cidr
@@ -46,13 +45,16 @@ resource "aws_subnet" "private_b" {
   tags = { Name = "private-subnet-b" }
 }
 
-# Public route table
+# Route Tables
+# Public Route Table
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
+
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
   }
+
   tags = { Name = "public-rt" }
 }
 
@@ -66,8 +68,77 @@ resource "aws_route_table_association" "public_b_assoc" {
   route_table_id = aws_route_table.public_rt.id
 }
 
+# Private Route Table
+resource "aws_route_table" "private_rt" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "private-rt" }
+}
+
+resource "aws_route_table_association" "private_a_assoc" {
+  subnet_id      = aws_subnet.private_a.id
+  route_table_id = aws_route_table.private_rt.id
+}
+
+resource "aws_route_table_association" "private_b_assoc" {
+  subnet_id      = aws_subnet.private_b.id
+  route_table_id = aws_route_table.private_rt.id
+}
+
+# NAT Instance 
+resource "aws_security_group" "nat_sg" {
+  vpc_id = aws_vpc.main.id
+  name   = "nat-sg"
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.private_subnet_a_cidr, var.private_subnet_b_cidr] # Only private subnets can talk
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+resource "aws_instance" "nat" {
+  ami                         = data.aws_ami.amazon_linux.id
+  instance_type               = "t3.micro"
+  subnet_id                   = aws_subnet.public_a.id
+  vpc_security_group_ids      = [aws_security_group.nat_sg.id]
+  associate_public_ip_address = true
+  source_dest_check           = false
+  tags = { Name = "nat-instance" }
+}
+
+# Add route for private subnets to use NAT instance
+resource "aws_route" "private_a_nat" {
+  route_table_id         = aws_route_table.private_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  instance_id            = aws_instance.nat.id
+}
+
+resource "aws_route" "private_b_nat" {
+  route_table_id         = aws_route_table.private_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  instance_id            = aws_instance.nat.id
+}
+
 # Security Groups
-# ALB Security Group
+# ALB SG
 resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.main.id
   name   = "alb-sg"
@@ -87,7 +158,7 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
-# Webserver Security Group
+# Web SG
 resource "aws_security_group" "web_sg" {
   vpc_id = aws_vpc.main.id
   name   = "web-sg"
@@ -96,14 +167,7 @@ resource "aws_security_group" "web_sg" {
     from_port       = 80
     to_port         = 80
     protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id] # Only ALB can access
-  }
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["YOUR_PUBLIC_IP/32"] # Optional: restrict SSH to your IP
+    security_groups = [aws_security_group.alb_sg.id]
   }
 
   egress {
@@ -114,7 +178,7 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
-# Database Security Group
+# DB SG
 resource "aws_security_group" "db_sg" {
   vpc_id = aws_vpc.main.id
   name   = "db-sg"
@@ -123,7 +187,7 @@ resource "aws_security_group" "db_sg" {
     from_port       = 3306
     to_port         = 3306
     protocol        = "tcp"
-    security_groups = [aws_security_group.web_sg.id] # Only webservers can connect
+    security_groups = [aws_security_group.web_sg.id]
   }
 
   egress {
@@ -134,23 +198,13 @@ resource "aws_security_group" "db_sg" {
   }
 }
 
-# AMI
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
-}
-
-# EC2 Instances 
+# EC2 Webservers
 resource "aws_instance" "web1" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.public_a.id
+  subnet_id                   = aws_subnet.private_a.id
   vpc_security_group_ids      = [aws_security_group.web_sg.id]
-  associate_public_ip_address = true
+  associate_public_ip_address = false
 
   root_block_device {
     volume_type = "gp3"
@@ -163,9 +217,9 @@ resource "aws_instance" "web1" {
 resource "aws_instance" "web2" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.public_b.id
+  subnet_id                   = aws_subnet.private_b.id
   vpc_security_group_ids      = [aws_security_group.web_sg.id]
-  associate_public_ip_address = true
+  associate_public_ip_address = false
 
   root_block_device {
     volume_type = "gp3"

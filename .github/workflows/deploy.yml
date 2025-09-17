@@ -40,6 +40,13 @@ jobs:
         working-directory: ./terraform
 
       - name: Terraform Apply
+        id: apply
         run: terraform apply -auto-approve tfplan
+        working-directory: ./terraform
+        continue-on-error: true  
+
+      - name: Terraform Destroy on Apply Failure
+        if: steps.apply.outcome == 'failure'  
+        run: terraform destroy -auto-approve
         working-directory: ./terraform
 

@@ -188,11 +188,11 @@ resource "aws_instance" "nat" {
   tags = { Name = "nat-instance" }
 }
 
-# Private route through NAT
+# NAT Route for private subnets
 resource "aws_route" "private_nat_route" {
   route_table_id         = aws_route_table.private_rt.id
   destination_cidr_block = "0.0.0.0/0"
-  instance_id            = aws_instance.nat.id
+  network_interface_id   = aws_instance.nat.primary_network_interface_id
 }
 
 # Webservers

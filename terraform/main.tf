@@ -5,7 +5,7 @@ provider "aws" {
 # VPC and Subnets
 resource "aws_vpc" "main" {
   cidr_block = var.vpc_cidr
-  tags = { Name = "basic-vpc" }
+  tags       = { Name = "basic-vpc" }
 }
 
 resource "aws_internet_gateway" "igw" {
@@ -35,18 +35,18 @@ resource "aws_subnet" "private_a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_a_cidr
   availability_zone = "eu-central-1a"
-  tags = { Name = "private-subnet-a" }
+  tags              = { Name = "private-subnet-a" }
 }
 
 resource "aws_subnet" "private_b" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_b_cidr
   availability_zone = "eu-central-1b"
-  tags = { Name = "private-subnet-b" }
+  tags              = { Name = "private-subnet-b" }
 }
 
 # Route Tables
-# Public Route Table
+# Public RT
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
 
@@ -68,7 +68,7 @@ resource "aws_route_table_association" "public_b_assoc" {
   route_table_id = aws_route_table.public_rt.id
 }
 
-# Private Route Table
+# Private RT
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.main.id
   tags   = { Name = "private-rt" }
@@ -84,7 +84,8 @@ resource "aws_route_table_association" "private_b_assoc" {
   route_table_id = aws_route_table.private_rt.id
 }
 
-# Security group for NAT instance
+# Security Groups
+# NAT SG
 resource "aws_security_group" "nat_sg" {
   vpc_id = aws_vpc.main.id
   name   = "nat-sg"
@@ -104,50 +105,6 @@ resource "aws_security_group" "nat_sg" {
   }
 }
 
-# NAT EC2 instance
-resource "aws_instance" "nat" {
-  ami                    = data.aws_ami.amazon_linux.id
-  instance_type           = "t3.micro"
-  subnet_id               = aws_subnet.public_a.id
-  source_dest_check       = false  # required for NAT instance
-  vpc_security_group_ids  = [aws_security_group.nat_sg.id]
-  associate_public_ip_address = true
-
-  root_block_device {
-    volume_type = "gp3"
-    volume_size = 8
-  }
-
-  tags = { Name = "nat-instance" }
-}
-
-# Private route tables for private subnets
-resource "aws_route_table" "private_rt" {
-  vpc_id = aws_vpc.main.id
-  tags   = { Name = "private-rt" }
-}
-
-# Associate private subnets
-resource "aws_route_table_association" "private_a_assoc" {
-  subnet_id      = aws_subnet.private_a.id
-  route_table_id = aws_route_table.private_rt.id
-}
-
-resource "aws_route_table_association" "private_b_assoc" {
-  subnet_id      = aws_subnet.private_b.id
-  route_table_id = aws_route_table.private_rt.id
-}
-
-# Routes for NAT instance
-resource "aws_route" "private_nat" {
-  count                  = 2
-  route_table_id         = aws_route_table.private_rt.id
-  destination_cidr_block = "0.0.0.0/0"
-  instance_id            = aws_instance.nat.id
-}
-
-
-# Security Groups
 # ALB SG
 resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.main.id
@@ -208,35 +165,49 @@ resource "aws_security_group" "db_sg" {
   }
 }
 
-# EC2 Webservers
-resource "aws_instance" "web1" {
+# AMI
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+# NAT Instance
+resource "aws_instance" "nat" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.private_a.id
-  vpc_security_group_ids      = [aws_security_group.web_sg.id]
-  associate_public_ip_address = false
+  subnet_id                   = aws_subnet.public_a.id
+  vpc_security_group_ids      = [aws_security_group.nat_sg.id]
+  associate_public_ip_address = true
+  source_dest_check           = false
 
-  root_block_device {
-    volume_type = "gp3"
-    volume_size = 8
-  }
+  tags = { Name = "nat-instance" }
+}
 
-  tags = { Name = "web1" }
+# Private route through NAT
+resource "aws_route" "private_nat_route" {
+  route_table_id         = aws_route_table.private_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  instance_id            = aws_instance.nat.id
+}
+
+# Webservers
+resource "aws_instance" "web1" {
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.private_a.id
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
 }
 
 resource "aws_instance" "web2" {
-  ami                         = data.aws_ami.amazon_linux.id
-  instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.private_b.id
-  vpc_security_group_ids      = [aws_security_group.web_sg.id]
-  associate_public_ip_address = false
-
-  root_block_device {
-    volume_type = "gp3"
-    volume_size = 8
-  }
-
-  tags = { Name = "web2" }
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.private_b.id
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
 }
 
 # Load Balancer
@@ -278,7 +249,7 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# RDS Database
+# RDS
 resource "aws_db_subnet_group" "db_subnet" {
   name       = "db-subnet-group"
   subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]

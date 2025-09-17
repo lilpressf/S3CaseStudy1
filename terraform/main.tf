@@ -84,7 +84,7 @@ resource "aws_route_table_association" "private_b_assoc" {
   route_table_id = aws_route_table.private_rt.id
 }
 
-# NAT Instance 
+# Security group for NAT instance
 resource "aws_security_group" "nat_sg" {
   vpc_id = aws_vpc.main.id
   name   = "nat-sg"
@@ -93,7 +93,7 @@ resource "aws_security_group" "nat_sg" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.private_subnet_a_cidr, var.private_subnet_b_cidr] # Only private subnets can talk
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -104,38 +104,48 @@ resource "aws_security_group" "nat_sg" {
   }
 }
 
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
-}
-
+# NAT EC2 instance
 resource "aws_instance" "nat" {
-  ami                         = data.aws_ami.amazon_linux.id
-  instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.public_a.id
-  vpc_security_group_ids      = [aws_security_group.nat_sg.id]
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type           = "t3.micro"
+  subnet_id               = aws_subnet.public_a.id
+  source_dest_check       = false  # required for NAT instance
+  vpc_security_group_ids  = [aws_security_group.nat_sg.id]
   associate_public_ip_address = true
-  source_dest_check           = false
+
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 8
+  }
+
   tags = { Name = "nat-instance" }
 }
 
-# Add route for private subnets to use NAT instance
-resource "aws_route" "private_a_nat" {
+# Private route tables for private subnets
+resource "aws_route_table" "private_rt" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "private-rt" }
+}
+
+# Associate private subnets
+resource "aws_route_table_association" "private_a_assoc" {
+  subnet_id      = aws_subnet.private_a.id
+  route_table_id = aws_route_table.private_rt.id
+}
+
+resource "aws_route_table_association" "private_b_assoc" {
+  subnet_id      = aws_subnet.private_b.id
+  route_table_id = aws_route_table.private_rt.id
+}
+
+# Routes for NAT instance
+resource "aws_route" "private_nat" {
+  count                  = 2
   route_table_id         = aws_route_table.private_rt.id
   destination_cidr_block = "0.0.0.0/0"
   instance_id            = aws_instance.nat.id
 }
 
-resource "aws_route" "private_b_nat" {
-  route_table_id         = aws_route_table.private_rt.id
-  destination_cidr_block = "0.0.0.0/0"
-  instance_id            = aws_instance.nat.id
-}
 
 # Security Groups
 # ALB SG

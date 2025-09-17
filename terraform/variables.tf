@@ -45,3 +45,15 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+variable "ssh_public_key" {
+  description = "Contents of your SSH public key"
+  type        = string
+  sensitive   = true
+}
+
+variable "ssh_cidr" {
+  description = "CIDR block allowed to SSH into webservers"
+  type        = string
+  sensitive   = true
+}

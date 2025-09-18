@@ -1,9 +1,6 @@
 name: Destroy AWS Infrastructure
 
 on:
-  push:
-    branches:
-      - test  
   workflow_dispatch:
 
 jobs:

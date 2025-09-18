@@ -1,4 +1,4 @@
-name: Deploy AWS Infrastructure
+name: Destroy AWS Infrastructure
 
 on:
   push:
@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  destroy:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  
+      id-token: write
       contents: read
 
     steps:
@@ -20,7 +20,7 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Set Terraform environment variables
@@ -39,13 +39,7 @@ jobs:
         run: terraform init
         working-directory: ./terraform
 
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan
+      - name: Terraform Destroy
+        id: destroy
+        run: terraform destroy -auto-approve
         working-directory: ./terraform
-
-      - name: Terraform Apply
-        id: apply
-        run: terraform apply -auto-approve tfplan
-        working-directory: ./terraform
-        continue-on-error: true
-

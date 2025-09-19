@@ -25,36 +25,42 @@ resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.main.id
   name   = "alb-sg"
 
-  # Allow HTTP from internet
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"]   # This is correct
   }
 
-  # Outbound to webservers
   egress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.web_sg.id]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 
 # Webserver Security Group
 resource "aws_security_group" "web_sg" {
   vpc_id = aws_vpc.main.id
   name   = "web-sg"
 
-  # Outbound to internet via NAT 
+  ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]  # ALB SG
+  }
+
   egress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 
 # Database Security Group
 resource "aws_security_group" "db_sg" {

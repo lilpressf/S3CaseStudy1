@@ -47,14 +47,6 @@ resource "aws_security_group" "web_sg" {
   vpc_id = aws_vpc.main.id
   name   = "web-sg"
 
-  # Allow HTTP only from ALB
-  ingress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id]
-  }
-
   # Outbound to internet via NAT 
   egress {
     from_port   = 80

@@ -25,6 +25,7 @@ resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.main.id
   name   = "alb-sg"
 
+  # Inbound HTTP from internet
   ingress {
     from_port   = 80
     to_port     = 80
@@ -32,15 +33,14 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Outbound: allow all 
   egress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.web_sg.id]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
-
 
 # Webserver Security Group
 resource "aws_security_group" "web_sg" {
@@ -55,7 +55,7 @@ resource "aws_security_group" "web_sg" {
     security_groups = [aws_security_group.alb_sg.id]
   }
 
-  # Outbound to NAT (HTTP/HTTPS)
+  # Outbound to NAT (for updates)
   egress {
     from_port   = 80
     to_port     = 443
@@ -72,7 +72,6 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
-
 # Database Security Group
 resource "aws_security_group" "db_sg" {
   vpc_id = aws_vpc.main.id
@@ -86,6 +85,7 @@ resource "aws_security_group" "db_sg" {
     security_groups = [aws_security_group.web_sg.id]
   }
 
+  # Outbound: allow all 
   egress {
     from_port   = 0
     to_port     = 0
@@ -93,7 +93,6 @@ resource "aws_security_group" "db_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
 
 # Key Pair for web servers
 resource "aws_key_pair" "web_key" {

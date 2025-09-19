@@ -10,13 +10,8 @@ resource "aws_route_table" "public_rt" {
   tags = { Name = "public-rt" }
 }
 
-resource "aws_route_table_association" "public_a_assoc" {
-  subnet_id      = aws_subnet.public_a.id
-  route_table_id = aws_route_table.public_rt.id
-}
-
-resource "aws_route_table_association" "public_b_assoc" {
-  subnet_id      = aws_subnet.public_b.id
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public_rt.id
 }
 
@@ -40,7 +35,7 @@ resource "aws_route_table_association" "private_b_assoc" {
 resource "aws_instance" "nat" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.public_a.id
+  subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.nat_sg.id]
   associate_public_ip_address = true
   source_dest_check           = false
@@ -49,7 +44,7 @@ resource "aws_instance" "nat" {
   tags = { Name = "nat-instance" }
 }
 
-# NAT route
+# NAT route for private subnets
 resource "aws_route" "private_nat_route" {
   route_table_id         = aws_route_table.private_rt.id
   destination_cidr_block = "0.0.0.0/0"

@@ -55,14 +55,6 @@ resource "aws_security_group" "web_sg" {
     security_groups = [aws_security_group.alb_sg.id]
   }
 
-  # Outbound to database on port 3306
-  egress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.db_sg.id]
-  }
-
   # Outbound to internet via NAT 
   egress {
     from_port   = 80

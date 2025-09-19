@@ -13,9 +13,3 @@ resource "aws_instance" "web2" {
   vpc_security_group_ids = [aws_security_group.web_sg.id]
   key_name               = aws_key_pair.web_key.key_name
 }
-
-resource "aws_key_pair" "web_key" {
-  key_name   = "web-key"
-  public_key = var.ssh_public_key
-}
-

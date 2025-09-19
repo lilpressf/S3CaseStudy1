@@ -10,8 +10,13 @@ resource "aws_route_table" "public_rt" {
   tags = { Name = "public-rt" }
 }
 
-resource "aws_route_table_association" "public_assoc" {
-  subnet_id      = aws_subnet.public.id
+resource "aws_route_table_association" "public_a_assoc" {
+  subnet_id      = aws_subnet.public_a.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+resource "aws_route_table_association" "public_b_assoc" {
+  subnet_id      = aws_subnet.public_b.id
   route_table_id = aws_route_table.public_rt.id
 }
 
@@ -31,29 +36,22 @@ resource "aws_route_table_association" "private_b_assoc" {
   route_table_id = aws_route_table.private_rt.id
 }
 
-# NAT instance key 
-resource "aws_key_pair" "nat_key" {
-  key_name   = "nat-key"
-  public_key = var.ssh_public_key
-}
-
 # NAT instance
 resource "aws_instance" "nat" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = "t3.micro"
-  subnet_id                   = aws_subnet.public.id
+  subnet_id                   = aws_subnet.public_a.id
   vpc_security_group_ids      = [aws_security_group.nat_sg.id]
   associate_public_ip_address = true
   source_dest_check           = false
-  key_name                    = aws_key_pair.nat_key.key_name
+  key_name                    = aws_key_pair.web_key.key_name
 
   tags = { Name = "nat-instance" }
 }
 
-# NAT route for private subnets
+# NAT route
 resource "aws_route" "private_nat_route" {
   route_table_id         = aws_route_table.private_rt.id
   destination_cidr_block = "0.0.0.0/0"
   network_interface_id   = aws_instance.nat.primary_network_interface_id
 }
-

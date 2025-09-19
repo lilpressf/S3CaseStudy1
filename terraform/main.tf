@@ -8,22 +8,29 @@ resource "aws_vpc" "main" {
   tags       = { Name = "basic-vpc" }
 }
 
-# Internet Gateway
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
   tags   = { Name = "main-igw" }
 }
 
-# Public subnet (for NAT + ALB)
-resource "aws_subnet" "public" {
+# Public subnets
+resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidr
+  cidr_block              = var.public_subnet_a_cidr
   availability_zone       = "eu-central-1a"
   map_public_ip_on_launch = true
-  tags                    = { Name = "public-subnet" }
+  tags = { Name = "public-subnet-a" }
 }
 
-# Private subnets (for webservers)
+resource "aws_subnet" "public_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_b_cidr
+  availability_zone       = "eu-central-1b"
+  map_public_ip_on_launch = true
+  tags = { Name = "public-subnet-b" }
+}
+
+# Private subnets
 resource "aws_subnet" "private_a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_a_cidr

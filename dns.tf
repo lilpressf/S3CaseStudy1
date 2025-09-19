@@ -1,6 +1,6 @@
 # Private Route 53 hosted zone
 resource "aws_route53_zone" "private" {
-  name = "internal.daan.com"
+  name = "internal.daan.local"
 
   vpc {
     vpc_id = aws_vpc.main.id
@@ -10,7 +10,7 @@ resource "aws_route53_zone" "private" {
 # Private DNS record for web1
 resource "aws_route53_record" "web1_private" {
   zone_id = aws_route53_zone.private.zone_id
-  name    = "web1.internal.daan.com"
+  name    = "web1.internal.daan.local"
   type    = "A"
   ttl     = 300
   records = [aws_instance.web1.private_ip]
@@ -19,7 +19,7 @@ resource "aws_route53_record" "web1_private" {
 # Private DNS record for web2
 resource "aws_route53_record" "web2_private" {
   zone_id = aws_route53_zone.private.zone_id
-  name    = "web2.internal.daan.com"
+  name    = "web2.internal.daan.local"
   type    = "A"
   ttl     = 300
   records = [aws_instance.web2.private_ip]
@@ -28,7 +28,7 @@ resource "aws_route53_record" "web2_private" {
 # Private DNS record for RDS (CNAME instead of A)
 resource "aws_route53_record" "db_private" {
   zone_id = aws_route53_zone.private.zone_id
-  name    = "db.internal.daan.com"
+  name    = "db.internal.daan.local"
   type    = "CNAME"
   ttl     = 300
   records = [aws_db_instance.db.endpoint]

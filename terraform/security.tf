@@ -65,10 +65,10 @@ resource "aws_security_group" "web_sg" {
 
   # Outbound to DB
   egress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.db_sg.id]
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = [var.private_subnet_a_cidr, var.private_subnet_b_cidr]
   }
 }
 
@@ -77,12 +77,12 @@ resource "aws_security_group" "db_sg" {
   vpc_id = aws_vpc.main.id
   name   = "db-sg"
 
-  # Allow MySQL only from webservers
+# Allow MySQL only from webserver subnets
   ingress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.web_sg.id]
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = [var.private_subnet_a_cidr, var.private_subnet_b_cidr]
   }
 
   # Outbound: allow all 

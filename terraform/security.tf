@@ -10,6 +10,13 @@ resource "aws_security_group" "nat_sg" {
     protocol    = "tcp"
     cidr_blocks = [var.ssh_cidr]
   }
+  
+  ingress {
+  from_port       = 0
+  to_port         = 0
+  protocol        = "-1"
+  cidr_blocks     = [var.private_subnet_a_cidr, var.private_subnet_b_cidr]
+}
 
   # Outbound traffic for NAT
   egress {
@@ -56,19 +63,11 @@ resource "aws_security_group" "web_sg" {
   }
 
   # Outbound to NAT (for updates)
-  egress {
-    from_port   = 80
-    to_port     = 443
-    protocol    = "tcp"
+ egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Outbound to DB
-  egress {
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = [var.private_subnet_a_cidr, var.private_subnet_b_cidr]
   }
 }
 

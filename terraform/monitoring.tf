@@ -3,12 +3,7 @@ resource "aws_instance" "monitoring" {
   instance_type = "t3.micro"   
   subnet_id     = aws_subnet.public_a.id
   key_name      = aws_key_pair.web_key.key_name
-  security_groups = [aws_security_group.monitoring_sg.id]
-
-  root_block_device {
-    volume_size = 10    
-    volume_type = "gp3"
-  }
+  vpc_security_group_ids = [aws_security_group.monitoring_sg.id]
 
   tags = { Name = "monitoring-ec2" }
 

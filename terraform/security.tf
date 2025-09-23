@@ -115,12 +115,12 @@ resource "aws_security_group" "monitoring_sg" {
     cidr_blocks = [var.ssh_cidr]
   }
 
-  # Allow Prometheus access only inside VPC 
+  # Allow Prometheus access only from your IP
   ingress {
     from_port   = 9090
     to_port     = 9090
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = [var.ssh_cidr]
   }
 
   # Outbound: allow all

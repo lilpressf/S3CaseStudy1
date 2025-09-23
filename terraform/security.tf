@@ -77,7 +77,7 @@ resource "aws_security_group" "db_sg" {
   vpc_id = aws_vpc.main.id
   name   = "db-sg"
 
-# Allow MySQL only from webserver subnets
+  # Allow MySQL only from webserver subnets
   ingress {
     from_port   = 3306
     to_port     = 3306
@@ -92,6 +92,46 @@ resource "aws_security_group" "db_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+# Monitoring Security Group
+resource "aws_security_group" "monitoring_sg" {
+  vpc_id = aws_vpc.main.id
+  name   = "monitoring-sg"
+
+  # Allow SSH from your IP
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.ssh_cidr]
+  }
+
+  # Allow Grafana UI from your IP
+  ingress {
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = [var.ssh_cidr]
+  }
+
+  # Allow Prometheus access only inside VPC 
+  ingress {
+    from_port   = 9090
+    to_port     = 9090
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  # Outbound: allow all
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "monitoring-sg" }
 }
 
 # Key Pair for web servers

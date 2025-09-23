@@ -65,3 +65,10 @@ resource "aws_instance" "nat" {
 
   tags = { Name = "nat-instance" }
 }
+
+# Private route to NAT for Internet access
+resource "aws_route" "private_nat_route" {
+  route_table_id         = aws_route_table.private_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  network_interface_id   = aws_instance.nat.primary_network_interface_id
+}

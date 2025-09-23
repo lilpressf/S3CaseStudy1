@@ -43,9 +43,13 @@ jobs:
         run: terraform plan -out=tfplan
         working-directory: ./terraform
 
-      - name: Terraform Apply
-        id: apply
-        run: terraform apply -auto-approve tfplan
+      - name: Terraform Apply (with automatic destroy on failure)
         working-directory: ./terraform
-        continue-on-error: true
+        run: |
+          set -e
+          terraform apply -auto-approve tfplan || {
+            echo "Terraform apply failed, running terraform destroy..."
+            terraform destroy -auto-approve
+            exit 1
+          }
 

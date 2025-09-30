@@ -46,10 +46,27 @@ resource "aws_instance" "nat" {
   source_dest_check           = false
   key_name                    = aws_key_pair.web_key.key_name
 
+  user_data = <<-EOF
+              #!/bin/bash
+              yum update -y
+
+              # Enable IP forwarding
+              echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+              sysctl -p /etc/sysctl.conf
+
+              # Configure NAT with iptables
+              yum install -y iptables-services
+              iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+              # Save iptables rules so they persist across reboots
+              service iptables save
+              systemctl enable iptables
+              EOF
+
   tags = { Name = "nat-instance" }
 }
 
-# NAT route
+# Private route to NAT for Internet access
 resource "aws_route" "private_nat_route" {
   route_table_id         = aws_route_table.private_rt.id
   destination_cidr_block = "0.0.0.0/0"

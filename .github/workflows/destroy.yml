@@ -1,16 +1,13 @@
-name: Deploy AWS Infrastructure
+name: Destroy AWS Infrastructure
 
 on:
-  push:
-    branches:
-      - test
   workflow_dispatch:
 
 jobs:
-  deploy:
+  destroy:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  
+      id-token: write
       contents: read
 
     steps:
@@ -20,7 +17,7 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Set Terraform environment variables
@@ -36,20 +33,9 @@ jobs:
           terraform_version: 1.8.5
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -reconfigure
         working-directory: ./terraform
 
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
         working-directory: ./terraform
-
-      - name: Terraform Apply (with automatic destroy on failure)
-        working-directory: ./terraform
-        run: |
-          set -e
-          terraform apply -auto-approve tfplan || {
-            echo "Terraform apply failed, running terraform destroy..."
-            terraform destroy -auto-approve
-            exit 1
-          }
-

@@ -3,7 +3,7 @@ name: Deploy AWS Infrastructure
 on:
   push:
     branches:
-      - test  
+      - test
   workflow_dispatch:
 
 jobs:
